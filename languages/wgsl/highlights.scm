@@ -1,64 +1,77 @@
-; Comments
-(line_comment) @comment
-(block_comment) @comment
+; comments
 
-; Types - Built-ins
-; Scalar types
-((identifier) @type
-  (#any-of? @type "bool" "i32" "u32" "f32" "i64" "u64" "f64"))
+(line_comment) @comment.line
+(block_comment) @comment.block
 
-; Vector types
-((identifier) @type
-  (#match? @type "^vec[2-4]$"))
+; variables, types, constants
 
-; Matrix types
-((identifier) @type
-  (#match? @type "^mat[2-4]x[2-4]$"))
+(identifier) @variable
 
-; Special built-in types
-((identifier) @type
-  (#any-of? @type "atomic" "array" "texture" "sampler"))
+(param
+  name: (_) @variable.parameter)
 
-; Custom types (capitalized identifiers)
-((identifier) @type
-  (#match? @type "^[A-Z]"))
-
-; Struct declarations
 (struct_decl
   name: (_) @type)
 
-; Constants
-(bool_literal) @boolean
-(int_literal) @number
-(hex_int_literal) @number
-(float_literal) @number
+(struct_member
+  name: (_) @variable.other.member)
+
+(named_component_expression
+  component: (_) @variable.other.member)
+
+((identifier) @type
+  (#match? @type "^[A-Z]"))
 
 ((identifier) @constant
   (#match? @constant "^[A-Z0-9_]+$"))
 
-; Functions
-(function_decl
+(type_specifier
+    (identifier) @type)
+
+; imports (WESL extension)
+
+(import_item (identifier) @namespace)
+
+(import_path (identifier) @namespace)
+
+(ident_path (identifier) @namespace)
+
+(import_item (identifier) @type
+  (#match? @type "^[A-Z]"))
+
+(import_item (identifier) @constant
+  (#match? @constant "^[A-Z0-9_]+$"))
+
+; functions
+
+(function_decl 
   (function_header
     (identifier) @function))
 
 (call_expression
   (identifier) @function.call)
 
-; Templates
+(func_call_statement
+  (identifier) @function)
+
+; templates
+
 (template_list) @punctuation
 
-; Storage modifiers - FIXED
-(variable_decl
-  (template_list
-    (identifier) @keyword
-    (#any-of? @keyword "private" "storage" "uniform" "workgroup" "read" "write" "read_write")))
-
-; Type templates
 (type_specifier
   (template_list
     (identifier) @type))
 
-; Attributes
+(template_list
+  (template_list
+    (identifier) @type))
+
+(variable_decl ; this is var<storage> et.al
+  (template_list
+    (identifier) @keyword.storage.modifier))
+
+; attributes
+
 (attribute
   (identifier) @attribute) @attribute
 
@@ -68,86 +81,54 @@
     (identifier) @variable.builtin)
   (#eq? @attribute "builtin"))
 
-; Variables
-(param
-  (identifier) @variable.parameter)
+; literals
 
-(variable_decl
-  (identifier) @variable)
+(bool_literal) @constant.builtin.boolean
+(int_literal) @constant.numeric.integer
+(hex_int_literal) @constant.numeric.integer
+(float_literal) @constant.numeric.float
 
-(struct_member
-  name: (_) @property)
+; keywords
 
-(named_component_expression
-  component: (_) @property)
-
-; Control flow keywords
 [
-  "if"
-  "else"
-  "loop"
-  "for"
-  "while"
+  "alias"
+  "virtual" ; Bevy / naga_oil extension
+] @keyword
+
+[
   "switch"
   "case"
   "default"
   "break"
   "continue"
   "continuing"
-  "return"
   "discard"
+  "const_assert"
 ] @keyword.control
 
-; WESL extensions
-[
-  "import"
-  "as"
-] @keyword.control.import
+[ "fn" ] @keyword.control.function
+[ "if" "else" ] @keyword.control.conditional
+[ "loop" "for" "while" ] @keyword.control.repeat
+[ "return" ] @keyword.control.return
+[ "var" "let" "const" "override" "struct" ] @keyword.storage.type
+[ "diagnostic" "enable" "requires" ] @keyword.directive
+[ "import" "as" ] @keyword.control.import ; WESL import extension
 
-; Declaration keywords
-[
-  "var"
-  "let"
-  "const"
-  "override"
-  "fn"
-  "struct"
-  "alias"
-  "virtual"
-  "diagnostic"
-  "enable"
-  "requires"
-  "const_assert"
-] @keyword
+; expressions
 
-
-; Operators
 [
-  "-" "!" "~" "*" "&"  ; unary
-  "^" "|" "/" "%" "+"  ; binary
-  (shift_left) (shift_right)
+  "-" "!" "~" "*" "&" ; unary
+  "^" "|" "/" "%" "+" "&&" "||" (shift_left) (shift_right) ; binary
+  (less_than) (greater_than) (less_than_equal) (greater_than_equal) "==" "!=" ; relational
+  "+=" "-=" "*=" "/=" "%=" "|=" "^=" "++" "--" "=" ; assign
+  "->" ; return
 ] @operator
 
-; Comparison operators
-[
-  (less_than) (greater_than)
-  (less_than_equal) (greater_than_equal)
-  "==" "!="
-] @operator
+; punctuation
 
-; Assignment operators
-[
-  "+=" "-=" "*=" "/=" "%=" "|=" "^=" "++" "--" "="
-] @operator
-
-; Logical operators
-[
-  "&&" "||"
-] @operator
-
-; Punctuation
 [ "(" ")" "[" "]" "{" "}" ] @punctuation.bracket
-[ "," "." ":" ";" "->" ] @punctuation.delimiter
+[ "," "." ":" "::" ";" ] @punctuation.delimiter
 
-; Preprocessor
+; preprocessor
+
 [ (preproc_directive) "#import" ] @keyword.directive
